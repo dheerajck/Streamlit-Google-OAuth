@@ -15,7 +15,7 @@ def logout():
 
     if submit_button:
         # await client.revoke_token("TOKEN")
-        # doesnt work client.revoke_token(token)
+        # client.revoke_token(token) isnt deleting token from session
         st.session_state.token = None
         webbrowser.open("http://localhost:8501/")
 
@@ -34,7 +34,6 @@ def homepage():
     """
 
     status, google_auth_response = get_google_oauth()
-
 
     placeholder = st.empty()
     # placeholder.empty()

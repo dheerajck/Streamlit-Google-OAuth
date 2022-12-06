@@ -3,8 +3,11 @@ import os
 import webbrowser
 
 import streamlit as st
-from httpx_oauth.clients.google import GoogleOAuth2
 from dotenv import load_dotenv
+
+from httpx_oauth.clients.google import GoogleOAuth2
+
+from get_html_template import LOGIN_TO_CONTINUE_HTML, ACCOUNT_NOT_ALLOWED_HTML, USER_SESSION_ENDED_HTML
 
 
 async def get_authorization_url(client, redirect_uri):
@@ -38,7 +41,7 @@ def logged_in_user(user_id, user_email, client, token):
 
     if submit_button:
         # await client.revoke_token("TOKEN")
-        # doesnt work client.revoke_token(token)
+        # client.revoke_token(token) isnt deleting token from session
         st.session_state.token = None
         webbrowser.open("http://localhost:8501/")
 
@@ -65,44 +68,29 @@ def get_google_oauth():
         try:
             code = st.experimental_get_query_params()['code']
         except Exception:
-            message = f'''
-                <h2>
-                Login to continue <a style="font-family: 'Trebuchet MS', sans-serif" target="_self" href="{authorization_url}">Login</a>
-                </h2>'''
-
+            message = LOGIN_TO_CONTINUE_HTML(authorization_url)
             return (False, message)
 
+        # Verify if token is correct:
+        try:
+            token = asyncio.run(get_access_token(client=client, redirect_uri=redirect_uri, code=code))
+        except Exception:
+            message = ACCOUNT_NOT_ALLOWED_HTML(authorization_url)
+            return False, message
+
         else:
-            # Verify if token is correct:
-            try:
-                token = asyncio.run(get_access_token(client=client, redirect_uri=redirect_uri, code=code))
-            except Exception:
-                message = f'''
-                    <h1>
-                    This account is not allowed or page was refreshed.
-                    Please try again: <a style="font-family: 'Trebuchet MS' target="_self" href="{authorization_url}">Login</a>
-                    </h1>'''
-
-                return False, message
-
-            else:
-                # Check if token has expired:
+            # Check if token has expired:
+            if token.is_expired():
                 if token.is_expired():
-                    if token.is_expired():
-                        message = f'''
-                            <h1>
-                            Login session has ended,
-                            Please <a style="font-family: 'Trebuchet MS' target="_self" href="{authorization_url}"> login</a> again.
-                            </h1>'''
-
-                        return False, message
-                else:
-                    st.session_state.token = token
-                    user_id, user_email = asyncio.run(get_email(client=client, token=token['access_token']))
-                    st.session_state.user_id = user_id
-                    st.session_state.user_email = user_email
-                    # works if session doesnt get deleted with refresh
-                    # webbrowser.open("http://localhost:8501/", new=0)
-                    return True, "Success"
+                    message = USER_SESSION_ENDED_HTML(authorization_url)
+                    return False, message
+            else:
+                st.session_state.token = token
+                user_id, user_email = asyncio.run(get_email(client=client, token=token['access_token']))
+                st.session_state.user_id = user_id
+                st.session_state.user_email = user_email
+                # works if session doesnt get deleted with refresh
+                # webbrowser.open("http://localhost:8501/", new=0)
+                return True, "Success"
     else:
         return True, "Success"
