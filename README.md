@@ -28,3 +28,14 @@ Run `pip install -U -r requirements.txt` to install the requirements
 ### IV - Run the streamlit web app 
 Run the streamlit Resume reviewer web app using command `streamlit run streamlit_app.py` after installing requirements specified in requirements.txt  
 
+## Example on how to use this library to easily add google auth to your streamlit app in two lines.
+```
+import streamlit as st
+from google_auth_decorator import google_auth_required
+
+
+@google_auth_required
+def homepage():
+    # Home page content goes here...
+```
+
